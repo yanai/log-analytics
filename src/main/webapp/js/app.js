@@ -6,9 +6,9 @@ module.controller('Tikal.MainCtrl', ['$scope',
     }
 ]);
 
-module.directive('chart', ['tikalFusedayTweets', 'chartService', '$interval',
+module.directive('chart', ['logAnalytics', 'chartService', '$interval',
 
-    function(tikalFusedayTweets, chartService, $interval) {
+    function(logAnalytics, chartService, $interval) {
         return {
             restrict: 'E',
             replace: true,
@@ -18,52 +18,61 @@ module.directive('chart', ['tikalFusedayTweets', 'chartService', '$interval',
             link: function(scope, iElement, iAttrs) {
 
                 function init() {
-                    tikalFusedayTweets
-                        //.getTweetsByMinutes(5)
-                        .getTweetsBySecounds(5)
+                    logAnalytics
+                        .groupByDatesThenResponse()
                         .then(function(response) {
                             var chartServiceParams = [response.data];
                             if (chartService['draw' + scope.type]) {
                                 chartService['draw' + scope.type].apply(chartService, chartServiceParams);
                             }
-                        })
-                        .error(function(data) {
-                            debugger;
-                        })
-                        ;
+                        });
+                        // .error(function(data) {
+                        //     debugger;
+                        // });
                 }
                 init();
-                $interval(init, 1000 * 10, false);
+                //$interval(init, 1000 * 10, false);
             }
         };
     }
 ]);
 
-module.service('tikalFusedayTweets', ['$http',
+module.service('logAnalytics', ['$http',
     function($http) {
 
 
         return {
-            getTweetsByMinutes: function(minutes) {
-                var url = 'http://localhost:8080/lastTweets/minutes/' + minutes;// + '?callback=JSON_CALLBACK';
-                
+            groupByDatesThenResponse: function() {
+                /*var url = 'http://192.168.2.142:8080/lastTweets/minutes/' + minutes + '?callback=JSON_CALLBACK';*/
+
+                /*return $http.jsonp(url);*/
+                /*var url = 'yanai-data.json';*/
+                var url = 'http://localhost:8080/logs/grouping/datesThenResponse';
                 return $http.get(url);
-                //return $http.jsonp(url);
-                //return $http.get('data.json');
             },
 
-            getTweetsBySecounds: function(seconds) {
-            	var url = 'http://localhost:8080/lastTweets/seconds/' + seconds;// + '?callback=JSON_CALLBACK';
-                
-                return $http.get(url);
+            getTweetsBySecounds: function(secounds) {
+
             }
         };
     }
 ]);
 
-module.service('chartService', [
+Array.prototype.unique = function() {
+    var a = this.concat();
+    for(var i=0; i<a.length; ++i) {
+        for(var j=i+1; j<a.length; ++j) {
+            if(a[i] === a[j])
+                a.splice(j--, 1);
+        }
+    }
 
-    function() {
+    return a;
+};
+
+module.service('chartService', ['$window',
+
+    function($window) {
 
         function getRandomColor() {
             var letters = '0123456789ABCDEF'.split('');
@@ -89,9 +98,9 @@ module.service('chartService', [
                     bottom: 30,
                     left: 40
                 },
-                    width = 960 - margin.left - margin.right,
-                    height = 500 - margin.top - margin.bottom;
-
+                jqWindow = angular.element($window),
+                width = jqWindow.width()*(85/100) - margin.left - margin.right,
+                height = jqWindow.height()*(85/100) - margin.top - margin.bottom;
 
                 var x0 = d3
                     .scale
@@ -121,61 +130,50 @@ module.service('chartService', [
                     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
-                //  d3.json("data.json", function(error, data) {
-                var itemTweets = data[0][Object.keys(data[0])[0]];
-                var hashTagsArr = Object.keys(itemTweets);
+                var groupsTitle = [],
+                    itemsTitleInGroup = [],
+                    maxCount = 0,
+                    newData = [];
 
-                data.forEach(function(item) {
-                    var itemTime = Object.keys(item)[0],
-                        itemTweets = item[itemTime];
+                angular.forEach(data, function(groupItem, groupTitle) {
+                    var newItemData = {};
+                    newItemData[groupTitle] = groupItem;
+                    newData.push(newItemData)
 
-                    angular.forEach(itemTweets, function(counts) {
-                        if (angular.isUndefined(item.maxCount)) {
-                            item.maxCount = 0;
-                        }
-                        if (item.maxCount < counts) {
-                            item.maxCount = counts;
+                    var groupItemTitles = Object.keys(groupItem);
+                    groupsTitle.push(groupTitle);
+
+                    itemsTitleInGroup = itemsTitleInGroup
+                                            .concat(groupItemTitles)
+                                            .unique(); 
+
+
+                    angular.forEach(groupItem, function(itemValue, itemTitle){
+                        if(maxCount < itemValue){
+                            maxCount = itemValue;
                         }
                     });
 
-                    item.tweets = [];
+                });
 
-                    angular.forEach(itemTweets, function(val, key) {
-                        item.tweets.push({
-                            name: key,
-                            value: val
-                        });
-                    });
-                    item.name = getFormattedTime(itemTime);
-                })
 
-                function getFormattedTime(unixTime) {
-                    var ms = (unixTime * 1000),
-                        d = new Date(ms);
-                    return [
-                        d.getHours(),
-                        d.getMinutes(),
-                        d.getSeconds()
-                    ].join(':');
-                }
+                x0.domain(groupsTitle);
 
-                x0.domain(data.map(function(item) {
-                    //group name
-                    return getFormattedTime(Object.keys(item)[0]);
-                }));
+                x1
+                    .domain(itemsTitleInGroup)
+                    .rangeRoundBands([0, x0.rangeBand()]);
 
-                //all hash tag title
-                x1.domain(hashTagsArr).rangeRoundBands([0, x0.rangeBand()]);
+                y.domain([0, maxCount]);
 
-                y.domain([0, d3.max(data, function(item) {
-                    return item.maxCount;
-                })]);
 
+                // X Axis
                 svg.append("g")
                     .attr("class", "x axis")
                     .attr("transform", "translate(0," + height + ")")
                     .call(xAxis);
 
+                //Y Axis
+                //Y Axis Title in text
                 svg.append("g")
                     .attr("class", "y axis")
                     .call(yAxis)
@@ -184,20 +182,29 @@ module.service('chartService', [
                     .attr("y", 6)
                     .attr("dy", ".71em")
                     .style("text-anchor", "end")
-                    .text("Popularity");
-
-                var state = svg.selectAll(".state")
-                    .data(data)
-                    .enter().append("g")
-                    .attr("class", "g")
-                    .attr("transform", function(item) {
-                        return "translate(" + x0(getFormattedTime(Object.keys(item)[0])) + ",0)";
-                    });
+                    .text("Y Axis Title");
 
 
+
+                var state = svg
+                                .selectAll(".state")
+                                .data(newData)
+                                .enter()
+                                .append("g")
+                                .attr("class", "g")
+                                .attr("transform", function(item){
+                                    console.info(item);
+                                    return "translate(" + x0(Object.keys(item)[0])  + ",0)";
+                                });
+
+               
                 state.selectAll("rect")
                     .data(function(item) {
-                        return item.tweets;
+                        var newItem = [];
+                        angular.forEach(item[Object.keys(item)[0]], function(value, name) {
+                            newItem.push({name: name, value: value});
+                        });
+                        return newItem;
                     })
                     .enter()
                     .append("rect")
@@ -215,9 +222,8 @@ module.service('chartService', [
                         return color(item.name);
                     });
 
-
                 var legend = svg.selectAll(".legend")
-                    .data(hashTagsArr.slice().reverse())
+                    .data(itemsTitleInGroup.slice().reverse())
                     .enter().append("g")
                     .attr("class", "legend")
                     .attr("transform", function(d, i) {
@@ -239,7 +245,9 @@ module.service('chartService', [
                         return d;
                     });
 
-                // });
+
+
+          
 
             }
         };
