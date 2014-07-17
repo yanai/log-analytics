@@ -14,6 +14,8 @@ import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,37 +26,47 @@ import com.tikal.loganalytics.domain.LogEntry;
 @RequestMapping("/logs")
 @RestController
 public class LogAnalyticService {
+	private static final String LOG_EXT = "log";
+
 	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LogAnalyticService.class);
 
 	@Value("${app.logging.file.dir}")
 	private String loggingDir;
 
 	@Value("${app.logging.file.charset:latin1}")
-	private String charset;
-
-	@RequestMapping("/grouping/hosts")
-	public Map<String, Long> groupingByHost() {
-		return streamLogs().collect(groupingBy(LogEntry::getHost, counting()));
+	private String charsetName;
+	
+	private Charset charset;
+	
+	@PostConstruct
+	private void init(){
+		charset = Charset.forName(charsetName);
+	}
+	
+	///////////////////////STREAMING///////////////////////////////
+	private Stream<LogEntry> streamLogs() {
+		try {
+			return Files.list(Paths.get(loggingDir))
+					.filter(p -> p.getFileName().endsWith(LOG_EXT))
+					.flatMap(this::lines)
+					.map(LogEntry::parse);
+		} catch (final Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
-	@RequestMapping("/grouping/responses")
-	public Map<Integer, Long> groupingByResponse() {
-		return streamLogs().collect(groupingBy(LogEntry::getResponse, counting()));
+	
+	private Stream<String> lines(final Path path) {
+		try {
+			return Files.lines(path, Charset.forName(charsetName));
+		} catch (final IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
-
-	@RequestMapping("/grouping/dates")
-	public Map<LocalDate, Long> groupingByDates() {
-		return streamLogs().collect(groupingBy(LogEntry::getDate, TreeMap::new,counting()));
-	}
-
-	@RequestMapping("/grouping/datesThenHost")
-	public Map<LocalDate, Map<String, Long>> groupingByDatesThenHosts() {
-		return streamLogs().collect(groupingBy(LogEntry::getDate, TreeMap::new,groupingBy(LogEntry::getHost, counting())));
-	}
-
-	@RequestMapping("/grouping/datesThenResponse")
-	public Map<LocalDate, Map<Integer, Long>> groupingByDatesThenResponse() {
-		return streamLogs().collect(groupingBy(LogEntry::getDate,TreeMap::new, groupingBy(LogEntry::getResponse, counting())));
+	////////////////////////////////////////////////////////////////////
+	
+	private boolean anyMatch(final Predicate<? super LogEntry> predicate) {
+		return streamLogs().anyMatch(predicate);
 	}
 
 	// SHORT CIRCUIT EXAMPLE
@@ -68,28 +80,23 @@ public class LogAnalyticService {
 		return anyMatch((le) -> le.getByteSent() == 0);
 	}
 
-	private boolean anyMatch(final Predicate<? super LogEntry> predicate) {
-		return streamLogs().anyMatch(predicate);
+	
+		
+
+	////////////////////////GROUPING/////////////////////////////////
+
+	@RequestMapping("/grouping/responses")
+	public Map<Integer, Long> groupingByResponse() {
+		return streamLogs().collect(groupingBy(LogEntry::getResponse, counting()));
+	}
+	
+	@RequestMapping("/grouping/datesThenResponse")
+	public Map<LocalDate, Map<Integer, Long>> groupingByDatesThenResponse() {
+		return streamLogs().collect(groupingBy(LogEntry::getDate,TreeMap::new, groupingBy(LogEntry::getResponse, counting())));
 	}
 
-	private Stream<LogEntry> streamLogs() {
-		try {
-			return Files.list(Paths.get(loggingDir))
-					.filter(p -> p.toString()
-					.endsWith("log"))
-					.flatMap(this::lines)
-					.map(LogEntry::parse);
-		} catch (final Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
+	
 
-	private Stream<String> lines(final Path path) {
-		try {
-			return Files.lines(path, Charset.forName(charset));
-		} catch (final IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
+	
 
 }

@@ -20,26 +20,6 @@ public class LogAnalyticServiceTests {
 
 	@Autowired
 	private LogAnalyticService logAnalyticService;
-	
-	@Test
-	public void testGroupByResponse() {
-		logAnalyticService.groupingByHost().forEach(printMap);
-	}
-
-	@Test
-	public void testGroupByDates() {
-		logAnalyticService.groupingByDates().forEach(printMap);
-	}
-	
-	@Test
-	public void testGroupByDatesThenHosts() {
-		logAnalyticService.groupingByDatesThenHosts().forEach(printMap);
-	}
-	
-	@Test
-	public void testGroupByHost() {
-		logAnalyticService.groupingByHost().forEach(printMap);
-	}
 
 	@Test
 	public void testFindAnyOK() {
