@@ -72,16 +72,14 @@ public class LogAnalyticService {
 	// SHORT CIRCUIT EXAMPLE
 	@RequestMapping("/any/{response}")
 	public boolean isAnyWithResponse(@PathVariable("response") final int response) {
-		return anyMatch((le) -> le.getResponse() >= response);
+		return anyMatch((le) -> le.getResponse() == response);
 	}
 
 	@RequestMapping("/any/empty-body")
 	public boolean isAnyEmptyResponse() {
 		return anyMatch((le) -> le.getByteSent() == 0);
 	}
-
-	
-		
+			
 
 	////////////////////////GROUPING/////////////////////////////////
 

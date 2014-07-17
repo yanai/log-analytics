@@ -184,7 +184,7 @@ module.service('chartService', ['$window',
                     .attr("y", 6)
                     .attr("dy", ".71em")
                     .style("text-anchor", "end")
-                    .text("Y Axis Title");
+                    .text("Count");
 
 
                 var state = svg
