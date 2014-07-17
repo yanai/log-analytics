@@ -47,7 +47,7 @@ public class LogAnalyticService {
 	private Stream<LogEntry> streamLogs() {
 		try {
 			return Files.list(Paths.get(loggingDir))
-					.filter(p -> p.getFileName().endsWith(LOG_EXT))
+					.filter(p -> p.toString().endsWith(LOG_EXT))
 					.flatMap(this::lines)
 					.map(LogEntry::parse);
 		} catch (final Exception e) {
@@ -58,7 +58,7 @@ public class LogAnalyticService {
 	
 	private Stream<String> lines(final Path path) {
 		try {
-			return Files.lines(path, Charset.forName(charsetName));
+			return Files.lines(path, charset);
 		} catch (final IOException e) {
 			throw new RuntimeException(e);
 		}

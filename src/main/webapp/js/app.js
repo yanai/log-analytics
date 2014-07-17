@@ -6,20 +6,21 @@ module.controller('Tikal.MainCtrl', ['$scope',
     }
 ]);
 
-module.directive('chart', ['logAnalytics', 'chartService', '$interval',
+module.directive('chart', ['logAnalysis', 'chartService', '$interval',
 
-    function(logAnalytics, chartService, $interval) {
+    function(logAnalysis, chartService, $interval) {
         return {
             restrict: 'E',
             replace: true,
             scope: {
-                type: '@'
+                type: '@',
+                url: '@'
             },
             link: function(scope, iElement, iAttrs) {
 
                 function init() {
-                    logAnalytics
-                        .groupByDatesThenResponse()
+                    logAnalysis
+                        .groupBy(scope.url)
                         .then(function(response) {
                             var chartServiceParams = [response.data];
                             if (chartService['draw' + scope.type]) {
@@ -37,22 +38,13 @@ module.directive('chart', ['logAnalytics', 'chartService', '$interval',
     }
 ]);
 
-module.service('logAnalytics', ['$http',
+module.service('logAnalysis', ['$http',
     function($http) {
 
 
         return {
-            groupByDatesThenResponse: function() {
-                /*var url = 'http://192.168.2.142:8080/lastTweets/minutes/' + minutes + '?callback=JSON_CALLBACK';*/
-
-                /*return $http.jsonp(url);*/
-                /*var url = 'yanai-data.json';*/
-                var url = 'http://localhost:8080/logs/grouping/datesThenResponse';
+            groupBy: function(url) {
                 return $http.get(url);
-            },
-
-            getTweetsBySecounds: function(secounds) {
-
             }
         };
     }
@@ -132,38 +124,48 @@ module.service('chartService', ['$window',
 
                 var groupsTitle = [],
                     itemsTitleInGroup = [],
-                    maxCount = 0,
                     newData = [];
 
                 angular.forEach(data, function(groupItem, groupTitle) {
-                    var newItemData = {};
-                    newItemData[groupTitle] = groupItem;
-                    newData.push(newItemData)
 
-                    var groupItemTitles = Object.keys(groupItem);
-                    groupsTitle.push(groupTitle);
-
-                    itemsTitleInGroup = itemsTitleInGroup
-                                            .concat(groupItemTitles)
-                                            .unique(); 
-
-
+                    var newGroupItem = {};
+                    newGroupItem[groupTitle] = groupItem;
+                    newGroupItem.maxCount = 0;
+                    newGroupItem.name = groupTitle;
+                    newGroupItem.data = [];
                     angular.forEach(groupItem, function(itemValue, itemTitle){
-                        if(maxCount < itemValue){
-                            maxCount = itemValue;
+                        if(itemsTitleInGroup.indexOf(itemTitle) === -1){
+                            itemsTitleInGroup.push(itemTitle)
                         }
+                        if(newGroupItem.maxCount < itemValue){
+                            newGroupItem.maxCount = itemValue;
+                        }
+                        newGroupItem.data.push({name: itemTitle,value: itemValue});
                     });
+
+
+                    newData.push(newGroupItem);
 
                 });
 
-
-                x0.domain(groupsTitle);
-
+                x0.domain(newData.map(function(item) {
+                    //group name
+                    return item.name;
+                }));
+                itemsTitleInGroup = itemsTitleInGroup.sort()
+                console.info(itemsTitleInGroup);
+                 //all hash tag title
                 x1
                     .domain(itemsTitleInGroup)
                     .rangeRoundBands([0, x0.rangeBand()]);
 
-                y.domain([0, maxCount]);
+                y.domain([0, d3.max(data, function(item) {
+                    return item.maxCount;
+                })]);
+
+                y.domain([0, d3.max(newData, function(item) {
+                    return item.maxCount;
+                })]);
 
 
                 // X Axis
@@ -185,7 +187,6 @@ module.service('chartService', ['$window',
                     .text("Y Axis Title");
 
 
-
                 var state = svg
                                 .selectAll(".state")
                                 .data(newData)
@@ -193,18 +194,12 @@ module.service('chartService', ['$window',
                                 .append("g")
                                 .attr("class", "g")
                                 .attr("transform", function(item){
-                                    console.info(item);
-                                    return "translate(" + x0(Object.keys(item)[0])  + ",0)";
+                                    return "translate(" + x0(item.name)  + ",0)";
                                 });
 
-               
                 state.selectAll("rect")
                     .data(function(item) {
-                        var newItem = [];
-                        angular.forEach(item[Object.keys(item)[0]], function(value, name) {
-                            newItem.push({name: name, value: value});
-                        });
-                        return newItem;
+                        return item.data;
                     })
                     .enter()
                     .append("rect")
@@ -221,6 +216,7 @@ module.service('chartService', ['$window',
                     .style("fill", function(item) {
                         return color(item.name);
                     });
+
 
                 var legend = svg.selectAll(".legend")
                     .data(itemsTitleInGroup.slice().reverse())
@@ -247,7 +243,7 @@ module.service('chartService', ['$window',
 
 
 
-          
+
 
             }
         };
