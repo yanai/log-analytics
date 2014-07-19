@@ -7,6 +7,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class LogEntry {
 	private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
 	private static final Pattern pattern = Pattern
@@ -32,12 +34,18 @@ public class LogEntry {
 		return host;
 	}
 
+	@JsonIgnore
 	public LocalDateTime getDateTime() {
 		return dateTime;
 	}
 
+	@JsonIgnore
 	public LocalDate getDate() {
 		return dateTime.toLocalDate();
+	}
+	
+	public String getDateFormatted() {
+		return dateTime.toString();
 	}
 	
 

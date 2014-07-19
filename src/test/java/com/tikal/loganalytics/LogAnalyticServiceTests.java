@@ -1,6 +1,8 @@
 package com.tikal.loganalytics;
 
+import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.stream.IntStream;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -10,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.tikal.loganalytics.Application;
+import com.tikal.loganalytics.domain.LogEntry;
 import com.tikal.loganalytics.service.LogAnalyticService;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -24,6 +27,17 @@ public class LogAnalyticServiceTests {
 	@Test
 	public void testFindAnyOK() {
 		logger.debug(String.valueOf(logAnalyticService.isAnyWithResponse(HttpStatus.FOUND.value())));
+	}
+	
+	@Test
+	public void testParallel() {
+		IntStream.rangeClosed(1, 10).parallel().forEach(System.out::println);
+	}
+	
+	@Test
+	public void testFindErrorLogs() {
+		final List<LogEntry> errLogs = logAnalyticService.findErrorLogs();
+		errLogs.forEach(le->logger.debug(le.toString()));
 	}
 	
 

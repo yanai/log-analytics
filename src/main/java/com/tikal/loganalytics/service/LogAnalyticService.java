@@ -1,7 +1,9 @@
 package com.tikal.loganalytics.service;
 
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -9,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Predicate;
@@ -17,6 +20,7 @@ import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -83,9 +87,13 @@ public class LogAnalyticService {
 
 	////////////////////////GROUPING/////////////////////////////////
 
-	@RequestMapping("/grouping/responses")
-	public Map<Integer, Long> groupingByResponse() {
-		return streamLogs().collect(groupingBy(LogEntry::getResponse, counting()));
+	@RequestMapping("/errors")
+	public List<LogEntry> findErrorLogs() {
+		return streamLogs()
+				.filter((le) -> le.getResponse() >= 500)
+				.sorted(comparing(LogEntry::getDateTime).reversed())
+				.limit(5)
+				.collect(toList());
 	}
 	
 	@RequestMapping("/grouping/datesThenResponse")
