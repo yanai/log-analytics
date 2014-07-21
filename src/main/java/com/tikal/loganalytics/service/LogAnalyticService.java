@@ -20,7 +20,6 @@ import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,7 +31,6 @@ import com.tikal.loganalytics.domain.LogEntry;
 public class LogAnalyticService {
 	private static final String LOG_EXT = "log";
 
-	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LogAnalyticService.class);
 
 	@Value("${app.logging.file.dir}")
 	private String loggingDir;
@@ -67,15 +65,26 @@ public class LogAnalyticService {
 			throw new RuntimeException(e);
 		}
 	}
-	////////////////////////////////////////////////////////////////////
+	
+////////////////////////LISTS/////////////////////////////////
+	@RequestMapping("/errors")
+	public List<LogEntry> findErrorLogs() {
+		return streamLogs()
+			.filter((le) -> le.getResponse() >= 500)
+			.sorted(comparing(LogEntry::getDateTime).reversed())
+			.limit(5)
+			.collect(toList());
+	}
+	
+
+	//////////////////////////ANY RESULTS//////////////////////////////////////////
 	
 	private boolean anyMatch(final Predicate<? super LogEntry> predicate) {
 		return streamLogs().anyMatch(predicate);
 	}
 
-	// SHORT CIRCUIT EXAMPLE
 	@RequestMapping("/any/{response}")
-	public boolean isAnyWithResponse(@PathVariable("response") final int response) {
+	public boolean isAnyResponse(@PathVariable("response") final int response) {
 		return anyMatch((le) -> le.getResponse() == response);
 	}
 
@@ -85,20 +94,15 @@ public class LogAnalyticService {
 	}
 			
 
-	////////////////////////GROUPING/////////////////////////////////
-
-	@RequestMapping("/errors")
-	public List<LogEntry> findErrorLogs() {
-		return streamLogs()
-				.filter((le) -> le.getResponse() >= 500)
-				.sorted(comparing(LogEntry::getDateTime).reversed())
-				.limit(5)
-				.collect(toList());
-	}
 	
+
+	//////////////////////GROUPING/////////////////////////////////
 	@RequestMapping("/grouping/datesThenResponse")
 	public Map<LocalDate, Map<Integer, Long>> groupingByDatesThenResponse() {
-		return streamLogs().collect(groupingBy(LogEntry::getDate,TreeMap::new, groupingBy(LogEntry::getResponse, counting())));
+		return streamLogs()
+				.collect(
+						groupingBy(LogEntry::getDate,TreeMap::new, 
+								groupingBy(LogEntry::getResponse, counting())));
 	}
 
 	

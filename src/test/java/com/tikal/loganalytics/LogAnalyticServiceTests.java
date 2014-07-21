@@ -26,13 +26,9 @@ public class LogAnalyticServiceTests {
 
 	@Test
 	public void testFindAnyOK() {
-		logger.debug(String.valueOf(logAnalyticService.isAnyWithResponse(HttpStatus.FOUND.value())));
+		logger.debug(String.valueOf(logAnalyticService.isAnyResponse(HttpStatus.FOUND.value())));
 	}
 	
-	@Test
-	public void testParallel() {
-		IntStream.rangeClosed(1, 10).parallel().forEach(System.out::println);
-	}
 	
 	@Test
 	public void testFindErrorLogs() {
