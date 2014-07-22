@@ -82,9 +82,6 @@ public class LogAnalyticService {
 
 	//////////////////////////ANY RESULTS//////////////////////////////////////////
 	
-	private boolean anyMatch(final Predicate<? super LogEntry> predicate) {
-		return streamLogs().anyMatch(predicate);
-	}
 
 	@RequestMapping("/any/{response}")
 	public boolean isAnyResponse(@PathVariable("response") final int response) {
@@ -95,8 +92,10 @@ public class LogAnalyticService {
 	public boolean isAnyEmptyResponse() {
 		return anyMatch((le) -> le.getByteSent() == 0);
 	}
-			
-
+	
+	private boolean anyMatch(final Predicate<? super LogEntry> predicate) {
+		return streamLogs().anyMatch(predicate);
+	}
 	
 
 	//////////////////////GROUPING/////////////////////////////////
