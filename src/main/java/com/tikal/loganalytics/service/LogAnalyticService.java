@@ -29,6 +29,7 @@ import com.tikal.loganalytics.domain.LogEntry;
 @RequestMapping("/logs")
 @RestController
 public class LogAnalyticService {
+	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LogAnalyticService.class);
 	private static final String LOG_EXT = "log";
 
 
@@ -51,7 +52,8 @@ public class LogAnalyticService {
 			return Files.list(Paths.get(loggingDir))
 					.filter(p -> p.toString().endsWith(LOG_EXT))
 					.flatMap(this::lines)
-					.map(LogEntry::parse);
+					.map(LogEntry::parse)
+					.filter(le->le!=null);
 		} catch (final Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -62,7 +64,8 @@ public class LogAnalyticService {
 		try {
 			return Files.lines(path, charset);
 		} catch (final IOException e) {
-			throw new RuntimeException(e);
+			logger.error("Failed to process "+path,e);
+			return Stream.empty();
 		}
 	}
 	

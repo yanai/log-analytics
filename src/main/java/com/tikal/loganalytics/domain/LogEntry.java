@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class LogEntry {
+	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LogEntry.class);
 	private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
 	private static final Pattern pattern = Pattern
 			.compile("^(\\S+) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})\\] \"(.+?)\" (\\d{3}) (\\S+)");
@@ -69,8 +70,10 @@ public class LogEntry {
 	
 	public static LogEntry parse(final String line) {
 		final Matcher matcher = pattern.matcher(line);
-		if (!matcher.matches()) 
-			throw new RuntimeException("Bad log entry"+line);
+		if (!matcher.matches()){ 
+			logger.error("Bad log entry {}",line);
+			return null;
+		}
 
 		final String byteSent = matcher.group(7);
 		return new LogEntry(matcher.group(1), LocalDateTime.parse(matcher.group(4), df), matcher.group(5),
