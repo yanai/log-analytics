@@ -85,17 +85,14 @@ public class LogAnalyticService {
 
 	@RequestMapping("/any/{response}")
 	public boolean isAnyResponse(@PathVariable("response") final int response) {
-		return anyMatch((le) -> le.getResponse() == response);
+		return streamLogs().anyMatch((le) -> le.getResponse() == response);
 	}
 
 	@RequestMapping("/any/empty-body")
 	public boolean isAnyEmptyResponse() {
-		return anyMatch((le) -> le.getByteSent() == 0);
+		return streamLogs().anyMatch((le) -> le.getByteSent() == 0);
 	}
 	
-	private boolean anyMatch(final Predicate<? super LogEntry> predicate) {
-		return streamLogs().anyMatch(predicate);
-	}
 	
 
 	//////////////////////GROUPING/////////////////////////////////
@@ -103,8 +100,9 @@ public class LogAnalyticService {
 	public Map<LocalDate, Map<Integer, Long>> groupingByDatesThenResponse() {
 		return streamLogs()
 				.collect(
-						groupingBy(LogEntry::getDate,TreeMap::new, 
-								groupingBy(LogEntry::getResponse, counting())));
+						groupingBy(	LogEntry::getDate,
+									TreeMap::new, 
+									groupingBy(LogEntry::getResponse, counting())));
 	}
 
 	
