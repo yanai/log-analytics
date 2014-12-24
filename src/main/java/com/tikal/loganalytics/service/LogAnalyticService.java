@@ -3,6 +3,7 @@ package com.tikal.loganalytics.service;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.summarizingInt;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
@@ -11,10 +12,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
@@ -93,6 +95,11 @@ public class LogAnalyticService {
 		return streamLogs().anyMatch((le) -> le.getByteSent() == 0);
 	}
 	
+	@RequestMapping("/heaviest")
+	public LogEntry findHeaviestEntryLog() {
+		return streamLogs().max(comparing(LogEntry::getByteSent)).orElse(null);
+	}
+	
 	
 
 	//////////////////////GROUPING/////////////////////////////////
@@ -103,6 +110,16 @@ public class LogAnalyticService {
 						groupingBy(	LogEntry::getDate,
 									TreeMap::new, 
 									groupingBy(LogEntry::getResponse, counting())));
+	}
+	
+	
+	@RequestMapping("/grouping/bytesPerDay")
+	public Map<LocalDate, IntSummaryStatistics> bytesSummaryPerDay() {
+		return streamLogs()
+				.collect(
+						groupingBy(	LogEntry::getDate,
+									TreeMap::new, 
+									summarizingInt(LogEntry::getByteSent)));
 	}
 
 	
