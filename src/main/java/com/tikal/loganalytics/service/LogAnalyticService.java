@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +71,9 @@ public class LogAnalyticService {
 	}
 	
 ////////////////////////LISTS/////////////////////////////////
+	
+	
+	//http://localhost:8080/logs/errors
 	@RequestMapping("/errors")
 	public List<LogEntry> findErrorLogs() {
 		return streamLogs()
@@ -85,16 +87,19 @@ public class LogAnalyticService {
 	//////////////////////////ANY RESULTS//////////////////////////////////////////
 	
 
+	//http://localhost:8080/logs/any/500
 	@RequestMapping("/any/{response}")
 	public boolean isAnyResponse(@PathVariable("response") final int response) {
 		return streamLogs().anyMatch((le) -> le.getResponse() == response);
 	}
 
+	//http://localhost:8080/logs/any/empty-body
 	@RequestMapping("/any/empty-body")
 	public boolean isAnyEmptyResponse() {
 		return streamLogs().anyMatch((le) -> le.getByteSent() == 0);
 	}
 	
+	//http://localhost:8080/logs/heaviest
 	@RequestMapping("/heaviest")
 	public LogEntry findHeaviestEntryLog() {
 		return streamLogs().max(comparing(LogEntry::getByteSent)).orElse(null);
@@ -103,8 +108,10 @@ public class LogAnalyticService {
 	
 
 	//////////////////////GROUPING/////////////////////////////////
-	@RequestMapping("/grouping/datesThenResponse")
-	public Map<LocalDate, Map<Integer, Long>> groupingByDatesThenResponse() {
+	
+	//http://localhost:8080/logs/grouping/responsesPerDay
+	@RequestMapping("/grouping/responsesPerDay")
+	public Map<LocalDate, Map<Integer, Long>> groupingByResponsesPerDay() {
 		return streamLogs()
 				.collect(
 						groupingBy(	LogEntry::getDate,
@@ -113,6 +120,7 @@ public class LogAnalyticService {
 	}
 	
 	
+	//http://localhost:8080/logs/grouping/bytesPerDay
 	@RequestMapping("/grouping/bytesPerDay")
 	public Map<LocalDate, IntSummaryStatistics> bytesSummaryPerDay() {
 		return streamLogs()
